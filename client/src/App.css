@@ -1,0 +1,11 @@
+.dashboard-body {
+  height: calc(100vh - 48px) !important;
+}
+.action-td {
+  height: 67px !important;
+}
+td,
+th {
+  white-space: nowrap;
+}
+
