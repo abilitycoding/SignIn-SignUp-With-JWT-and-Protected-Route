@@ -2,6 +2,9 @@ const express = require("express");
 const router = express.Router();
 const passport = require("../Config/passport-config");
 const User = require("../Model/userModel");
+const jwt = require("jsonwebtoken");
+const secretKey = process.env.JWT_SECRET;
+const section = process.env.SECTION;
 
 //get all data
 exports.getAllData = async (req, res, next) => {
@@ -31,28 +34,44 @@ exports.signUp = async (req, res, next) => {
 exports.signIn = async (req, res, next) => {
   const { name, password } = req.body;
 
-  const user = await User.findOne({ name });
-  // console.log(user);
+  try {
+    const user = await User.findOne({ name }).lean();
 
-  if (!user) {
-    return res.status(401).json({ error: "invalid user" });
+    if (!user) {
+      return res.status(401).json({ error: "Invalid user" });
+    }
+
+    // Use a secure password comparison method (e.g., bcrypt) in a real-world scenario
+    if (password !== user.password) {
+      return res.status(401).json({ error: "Invalid password" });
+    }
+
+    // Generate a JWT token
+    const token = jwt.sign({ user }, secretKey, {
+      expiresIn: section // Token expiration time
+    });
+
+    // Include the token in the response
+    const userData = {
+      name: user.name
+      // Add any other user data you want to include in the token payload
+    };
+
+    res.status(200).json({
+      success: true,
+      message: "Sign-in successfully",
+      token,
+      data: userData
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-
-  if (password !== user.password) {
-    return res.status(401).json({ error: "invalid password" });
-  }
-
-  const userData = {
-    name: user.name,
-    password: user.password
-  };
-
-  res.send({ success: true, message: "sign-in successfully", data: userData });
 };
 
 //uniq data
 
-exports.getUniqueData = async (req, res, next, next) => {
+exports.getUniqueData = async (req, res, next) => {
   const id = req.params.id;
   try {
     const uniqId = await User.findById(id);
@@ -63,7 +82,7 @@ exports.getUniqueData = async (req, res, next, next) => {
 };
 
 // update data
-exports.updateUserData = async  (req, res, next) => {
+exports.updateUserData = async (req, res, next) => {
   const id = req.params.id;
   const { name, email, password, phone, avatar } = req.body;
 
